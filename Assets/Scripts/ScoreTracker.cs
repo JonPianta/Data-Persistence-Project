@@ -9,13 +9,13 @@ public class ScoreTracker : MonoBehaviour
 
     public static ScoreTracker instance;
 
-    [SerializeField] MainManager mainManager;
-
     [SerializeField] TextMeshProUGUI nameInputField;
     public string nameInput;
     public int highScore = 0;
     public string highScoreName = "Name";
-
+    public KeyValuePair<string, int> highScoreNameScore;
+    public List<KeyValuePair<string, int>> scoreList = new List<KeyValuePair<string, int>>();
+         
     private void Awake()
     {
         if (instance != null)
@@ -40,30 +40,68 @@ public class ScoreTracker : MonoBehaviour
     {
         public int score;
         public string name;
+        public KeyValuePair<string, int> nameScore;
+        public List<KeyValuePair<string, int>> highScoreList = new List<KeyValuePair<string, int>>();
     }
 
-    public void SaveScore(int highScore, string playerName)
+    public void SaveScore(int rankingScore, string playerName)
     {
         Savedata data = new Savedata();
+
         //Set Savedata data equal to the highest score achieved and the player's name
-        data.score = highScore;
+        data.score = rankingScore;
         data.name = playerName;
+        data.nameScore = new KeyValuePair<string, int>(data.name, data.score);
+        data.highScoreList = scoreList;
 
-        string json = JsonUtility.ToJson(data);
+        //Update high score list if the score achieved is higher than one of the top ten all-time scores
+        if(data.highScoreList.Count != 10)
+        {
+            for (int i = 0; i < data.highScoreList.Count; i++)
+            {
+                if (data.highScoreList[i].Value < data.score)
+                {
+                    data.highScoreList.Insert(i, data.nameScore);
 
-        File.WriteAllText(Application.persistentDataPath + "/Hiscores.json", json);
+                    string json = JsonUtility.ToJson(data);
+
+                    File.WriteAllText(Application.persistentDataPath + "/BScoresList.json", json);
+
+                    return;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < data.highScoreList.Count; i++)
+            {
+                if(data.highScoreList[i].Value < data.score)
+                {
+                    data.highScoreList.Insert(i, data.nameScore);
+                    data.highScoreList.RemoveAt(10);
+
+                    string json = JsonUtility.ToJson(data);
+
+                    File.WriteAllText(Application.persistentDataPath + "/BScoresList.json", json);
+
+                    return;
+                }
+            }
+        }
     }
 
     public void LoadScore()
     {
-        string path = Application.persistentDataPath + "/Hiscores.json";
+        string path = Application.persistentDataPath + "/BScoresList.json";
         if(File.Exists(path))
         {
             string json = File.ReadAllText(path);
             Savedata data = JsonUtility.FromJson<Savedata>(json);
-            
-            highScore = data.score;
-            highScoreName = data.name;
+
+            scoreList = data.highScoreList;
+            highScore = data.highScoreList[0].Value;
+            highScoreName = data.highScoreList[0].Key;
+            highScoreNameScore = data.highScoreList[0];
         }
     }
 }
